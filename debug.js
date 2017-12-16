@@ -121,7 +121,7 @@ async function uploadAndGetShortName(id, expire, cachedSignedAddr) {
         const cfg = await readJSON(".grimoire");
         cfg.cachedSignedAddr = addr;
         cfg.expire = Date.now() + 1000 * 60 * 60 * 24 * 6;
-        await writeJSON(".grimoire", cfg);
+        await writeJSON("./common/.grimoire", cfg);
         console.log("SignedURL updated");
     } else {
         addr = cachedSignedAddr;
@@ -132,9 +132,9 @@ async function uploadAndGetShortName(id, expire, cachedSignedAddr) {
 }
 
 async function configure() {
-    if (!await exists(".grimoire")) {
+    if (!await exists("./common/.grimoire")) {
         const id = Math.random().toString(36).slice(-8)
-        await writeJSON(".grimoire", {
+        await writeJSON("./common/.grimoire", {
             id,
             arg: [],
             expire: 0,
@@ -143,7 +143,7 @@ async function configure() {
             }
         });
     }
-    return await readJSON(".grimoire");
+    return await readJSON("./common/.grimoire");
 }
 
 async function main() {
