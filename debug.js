@@ -118,7 +118,7 @@ async function uploadAndGetShortName(id, expire, cachedSignedAddr) {
     let addr;
     if (expire <= Date.now()) {
         addr = JSON.parse(await request("GET", ep, `/debugAddr/${id}/${name}`, ""));
-        const cfg = await readJSON(".grimoire");
+        const cfg = await readJSON("./common/.grimoire");
         cfg.cachedSignedAddr = addr;
         cfg.expire = Date.now() + 1000 * 60 * 60 * 24 * 6;
         await writeJSON("./common/.grimoire", cfg);
