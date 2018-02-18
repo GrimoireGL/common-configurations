@@ -1,6 +1,7 @@
 const fs = require("fs");
 const http = require("http");
 const URL = require("url");
+const chalk = require("chalk");
 const ep = "grimoire-e2e-worker.herokuapp.com";
 
 function exists(path) {
@@ -146,11 +147,44 @@ async function configure() {
     return await readJSON("./common/.grimoire");
 }
 
+function parameterObjectToParameterString(obj) {
+    let result = "";
+    let isFirst = true;
+    for (let key in obj) {
+        if (!isFirst) {
+            result += "&";
+        }
+        result += `${key}=${obj[key]}`;
+        isFirst = false;
+    }
+    return result;
+}
+
+function logVersions(obj) {
+    const black = '\u001b[30m';
+    const red = '\u001b[31m';
+    const green = '\u001b[32m';
+    const yellow = '\u001b[33m';
+    const blue = '\u001b[34m';
+    const magenta = '\u001b[35m';
+    const cyan = '\u001b[36m';
+    const white = '\u001b[37m';
+    const reset = '\u001b[0m';
+    for (let key in obj) {
+        console.log(`・ ${green}${key}${reset} -> ${yellow}${obj[key]}${reset}`);
+    }
+    console.log("\n");
+}
+
 async function main() {
-    const { id, arg, expire, cachedSignedAddr } = await configure();
+    const { id, arg, expire, cachedSignedAddr, configAddr } = await configure();
     const shortName = await uploadAndGetShortName(id, expire, cachedSignedAddr);
-    let param = `${shortName}=staging-${id}`;
-    console.log(`http://${ep}/?arg=${toBase64(param)}`);
+    let paramObj = {
+        [shortName]: `staging-${id}`,
+        ...configAddr
+    }
+    logVersions(paramObj);
+    console.log(`http://${ep}/?arg=${toBase64(parameterObjectToParameterString(paramObj))}`);
 }
 
 main();
