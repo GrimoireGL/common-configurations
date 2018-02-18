@@ -12,6 +12,10 @@ function exists(path) {
     });
 }
 
+function getUserHome() {
+    return process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
+}
+
 function read(path) {
     return new Promise((resolve, reject) => {
         fs.readFile(path, "utf-8", (err, content) => {
@@ -147,6 +151,19 @@ async function configure() {
     return await readJSON("./common/.grimoire");
 }
 
+async function getUserConfigure() {
+    const home = getUserHome();
+    const configFile = `${home}/.grimoire`
+    if (!await exists(configFile)) {
+        await writeJSON(configFile, {
+            overrideVersions: {
+
+            }
+        });
+    }
+    return await readJSON(configFile);
+}
+
 function parameterObjectToParameterString(obj) {
     let result = "";
     let isFirst = true;
@@ -160,7 +177,7 @@ function parameterObjectToParameterString(obj) {
     return result;
 }
 
-function logVersions(obj) {
+function logVersions(obj, io) {
     const black = '\u001b[30m';
     const red = '\u001b[31m';
     const green = '\u001b[32m';
@@ -170,6 +187,13 @@ function logVersions(obj) {
     const cyan = '\u001b[36m';
     const white = '\u001b[37m';
     const reset = '\u001b[0m';
+    for (let key in io) {
+        if (obj[key]) {
+            console.log(`・ ${red}${key} -> ${io[key]} (Overriden by local config)${reset}`);
+        } else {
+            console.log(`・ ${blue}${key}${reset} -> ${yellow}${io[key]}${blue} (From global config)${reset}`);
+        }
+    }
     for (let key in obj) {
         console.log(`・ ${green}${key}${reset} -> ${yellow}${obj[key]}${reset}`);
     }
@@ -178,12 +202,25 @@ function logVersions(obj) {
 
 async function main() {
     const { id, arg, expire, cachedSignedAddr, configAddr } = await configure();
+    const uc = await getUserConfigure();
     const shortName = await uploadAndGetShortName(id, expire, cachedSignedAddr);
     let paramObj = {
         [shortName]: `staging-${id}`,
-        ...configAddr
+        ...configAddr,
     }
-    logVersions(paramObj);
+    logVersions(paramObj, uc.overrideVersions);
+    paramObj = {
+        ...uc.overrideVersions,
+        ...paramObj
+    }
+    const updateGlobal = process.argv.includes("-ug");
+    if (updateGlobal) {
+        const home = getUserHome();
+        uc.overrideVersions[shortName] = paramObj[shortName];
+        const configFile = `${home}/.grimoire`
+        await write(configFile, JSON.stringify(uc, null, 2))
+        console.log("Global config updated");
+    }
     console.log(`http://${ep}/?arg=${toBase64(parameterObjectToParameterString(paramObj))}`);
 }
 
